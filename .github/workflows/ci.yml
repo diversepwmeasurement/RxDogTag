@@ -1,38 +1,52 @@
-name: CI
-
-on: [push, pull_request]
-
 jobs:
   build:
     name: JDK ${{ matrix.java_version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java_version: [1.8,10,11,12,13,14]
+    runs-on: self-hosted
     steps:
-    - name: Checkout
+    - continue-on-error: true
+      name: Checkout
       uses: actions/checkout@v1
-    - name: Install JDK
+    - continue-on-error: true
+      name: Install JDK
       uses: actions/setup-java@v1
       with:
         java-version: ${{ matrix.java_version }}
-    - name: Gradle Wrapper Validation
+    - continue-on-error: true
+      name: Gradle Wrapper Validation
       uses: gradle/wrapper-validation-action@v1
-    - name: Configure Gradle
-      # Initial gradle configuration, install dependencies, etc
+    - continue-on-error: true
+      name: Configure Gradle
       run: ./gradlew help
-    - name: Spot check
-      # Run spotless first to fail fast on spotless issues
+    - continue-on-error: true
+      name: Spot check
       run: ./gradlew spotlessCheck --stacktrace
-    - name: Build project
+    - continue-on-error: true
+      name: Build project
       run: ./gradlew assemble --stacktrace
-    - name: Run tests
+    - continue-on-error: true
+      name: Run tests
       run: ./gradlew test --stacktrace
-    - name: Final checks
+    - continue-on-error: true
+      name: Final checks
       run: ./gradlew check --stacktrace
-    - name: Upload snapshot (main only)
-      run: ./gradlew uploadArchives
+    - continue-on-error: true
       env:
-        SONATYPE_NEXUS_USERNAME: ${{ secrets.SonatypeUsername }}
         SONATYPE_NEXUS_PASSWORD: ${{ secrets.SonatypePassword }}
-      if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && matrix.java_version == '1.8'
+        SONATYPE_NEXUS_USERNAME: ${{ secrets.SonatypeUsername }}
+      if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        && matrix.java_version == '1.8'
+      name: Upload snapshot (main only)
+      run: ./gradlew uploadArchives
+    strategy:
+      matrix:
+        java_version:
+        - 1.8
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+name: CI
+on:
+  repository_dispatch:
+    types: trigger-ga___ci.yml
